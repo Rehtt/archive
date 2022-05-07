@@ -12,7 +12,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"io"
 	"strings"
 )
@@ -21,13 +20,13 @@ var pubKey []byte
 var pirKey []byte
 var open bool
 
+const size = 4096
+
 func InitKey(privateKey, publicKey []byte) {
 	pubKey = publicKey
 	pirKey = privateKey
 	open = true
 }
-
-var separate = []byte("Rsa")
 
 type Reader struct {
 	r   io.Reader
@@ -35,30 +34,37 @@ type Reader struct {
 }
 
 func (r *Reader) Read(p []byte) (n int, err error) {
+	s := len(p)
 	if !open {
 		return r.r.Read(p)
 	}
-	// todo 优化，不要一次性读到内存
-	if r.buf.Len() == 0 {
-		var buf bytes.Buffer
-		_, err = io.Copy(&buf, r.r)
-		fmt.Println(buf.Len())
-		if err != nil {
-			return 0, err
-		}
-		for _, v := range bytes.Split(buf.Bytes(), separate) {
-			if len(v) == 0 {
-				continue
+
+	if r.buf.Len() < s {
+		buf := make([]byte, size/8)
+
+		for r.buf.Len() < s {
+			nn, err := r.r.Read(buf)
+			if err != nil {
+				return 0, err
 			}
-			out, err := Decrypt(v)
+			if nn == 0 {
+				break
+			} else if nn != size/8 {
+				return 0, errors.New("file error")
+			}
+			out, err := Decrypt(buf)
 			if err != nil {
 				return 0, err
 			}
 			r.buf.Write(out)
 		}
+		if r.buf.Len() < s {
+			s = r.buf.Len()
+		}
 	}
 
-	n = copy(p, r.buf.Next(len(p)))
+	n = copy(p, r.buf.Next(s))
+
 	return
 }
 
@@ -73,7 +79,6 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 	buf := bytes.NewBuffer(p)
 	for buf.Len() != 0 {
 		var wBuf bytes.Buffer
-		wBuf.Write(separate)
 		out, err := Encrypt(buf.Next(501))
 		if err != nil {
 			return 0, err
@@ -122,7 +127,7 @@ func GenerateRsaKey() (priKey, pubKey []byte, err error) {
 
 	// 1. 使用rsa中的GenerateKey方法生成私钥
 
-	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	privateKey, err := rsa.GenerateKey(rand.Reader, size)
 	if err != nil {
 		return nil, nil, err
 	}
