@@ -21,6 +21,7 @@ var (
 
 	unArchiveMode = flag.Bool("ua", false, "解压")
 	decrypt       = flag.Bool("d", false, "开启解密")
+	check         = flag.Bool("check", false, "检测压缩包的错误")
 
 	inFile  = flag.String("in", "", "输入文件")
 	outFile = flag.String("out", "", "输出文件")
@@ -46,13 +47,35 @@ func main() {
 		}
 		return
 	}
+	if *inFile == "" {
+		fmt.Println("输入为空")
+		flag.Usage()
+		return
+	}
+
+	if *check {
+		if *decrypt {
+			data, err := ioutil.ReadFile(*keyFile)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			utils.InitKey(data, nil)
+		}
+		err := utils.CheckPackage(*inFile)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		fmt.Println("没有错误")
+		return
+	}
+
+	if *outFile == "" {
+		fmt.Println("输出为空")
+		flag.Usage()
+		return
+	}
 
 	if *archiveMode {
-		if *inFile == "" {
-			fmt.Println("输入为空")
-			flag.Usage()
-			return
-		}
 		if *encrypt {
 			data, err := ioutil.ReadFile(*keyFile)
 			if err != nil {
@@ -68,11 +91,6 @@ func main() {
 	}
 
 	if *unArchiveMode {
-		if *outFile == "" {
-			fmt.Println("输出为空")
-			flag.Usage()
-			return
-		}
 
 		if *decrypt {
 			data, err := ioutil.ReadFile(*keyFile)

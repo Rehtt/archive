@@ -36,12 +36,6 @@ func Compress(targetPath string, dest string) error {
 	tw := tar.NewWriter(xw)
 	defer tw.Close()
 	return compress(file, "", tw)
-	//for _, file := range files {
-	//	err := compress(file, "", tw)
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
 }
 func compress(file *os.File, prefix string, tw *tar.Writer) error {
 	info, err := file.Stat()
@@ -104,12 +98,15 @@ func DeTar(tarFile, dest string) error {
 				return err
 			}
 		}
-		filename := dest + hdr.Name
-		file, err := createFile(filename)
-		if err != nil {
-			return err
+		if dest != "" {
+			filename := dest + hdr.Name
+			file, err := createFile(filename)
+			if err != nil {
+				return err
+			}
+			io.Copy(file, tr)
 		}
-		io.Copy(file, tr)
+
 	}
 	return nil
 }
@@ -120,4 +117,8 @@ func createFile(name string) (*os.File, error) {
 		return nil, err
 	}
 	return os.Create(name)
+}
+
+func CheckPackage(tarFile string) error {
+	return DeTar(tarFile, "")
 }
