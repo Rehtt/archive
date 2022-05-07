@@ -12,6 +12,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -26,7 +27,7 @@ func InitKey(privateKey, publicKey []byte) {
 	open = true
 }
 
-var separate = []byte("Ras")
+var separate = []byte("Rsa")
 
 type Reader struct {
 	r   io.Reader
@@ -37,9 +38,11 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 	if !open {
 		return r.r.Read(p)
 	}
+	// todo 优化，不要一次性读到内存
 	if r.buf.Len() == 0 {
 		var buf bytes.Buffer
-		_, err := io.Copy(&buf, r.r)
+		_, err = io.Copy(&buf, r.r)
+		fmt.Println(buf.Len())
 		if err != nil {
 			return 0, err
 		}
@@ -54,38 +57,34 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 			r.buf.Write(out)
 		}
 	}
+
 	n = copy(p, r.buf.Next(len(p)))
 	return
 }
 
 type Writer struct {
-	w   io.Writer
-	buf bytes.Buffer
+	w io.Writer
 }
 
 func (w *Writer) Write(p []byte) (n int, err error) {
 	if !open {
 		return w.w.Write(p)
 	}
-	w.buf.Write(p)
-	return len(p), nil
-}
-func (w *Writer) Close() error {
-	for w.buf.Len() != 0 {
+	buf := bytes.NewBuffer(p)
+	for buf.Len() != 0 {
 		var wBuf bytes.Buffer
 		wBuf.Write(separate)
-		out, err := Encrypt(w.buf.Next(501))
+		out, err := Encrypt(buf.Next(501))
 		if err != nil {
-			return err
+			return 0, err
 		}
 		wBuf.Write(out)
 		_, err = io.Copy(w.w, &wBuf)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
-	w.buf.Reset()
-	return nil
+	return len(p), nil
 }
 
 func NewReader(r io.Reader) *Reader {

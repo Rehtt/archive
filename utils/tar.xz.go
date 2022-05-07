@@ -7,7 +7,6 @@ package utils
 
 import (
 	"archive/tar"
-	"fmt"
 	"github.com/ulikunitz/xz"
 	"io"
 	"os"
@@ -28,11 +27,6 @@ func Compress(targetPath string, dest string) error {
 	defer file.Close()
 
 	r := NewWriter(d)
-	defer func() {
-		if err := r.Close(); err != nil {
-			fmt.Println(err)
-		}
-	}()
 
 	xw, err := xz.NewWriter(r)
 	if err != nil {
