@@ -30,12 +30,11 @@ func AesCBCEncrypt(rawData, key, iv []byte) ([]byte, error) {
 		panic(err)
 	}
 	blockSize := block.BlockSize()
-	rawData = PKCS7Padding(rawData, blockSize)
+	//rawData = PKCS7Padding(rawData, blockSize)
 	cipherText := make([]byte, blockSize+len(rawData))
 
 	mode := cipher.NewCBCEncrypter(block, iv)
 	mode.CryptBlocks(cipherText[blockSize:], rawData)
-
 	return cipherText, nil
 }
 
@@ -55,7 +54,7 @@ func AesCBCDncrypt(encryptData, key, iv []byte) ([]byte, error) {
 	}
 	mode := cipher.NewCBCDecrypter(block, iv)
 	mode.CryptBlocks(encryptData, encryptData)
-	encryptData = PKCS7UnPadding(encryptData)
+	//encryptData = PKCS7UnPadding(encryptData)
 	return encryptData, nil
 }
 

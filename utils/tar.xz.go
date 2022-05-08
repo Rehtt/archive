@@ -32,6 +32,7 @@ func Compress(targetPath, dest string, isEncrypt bool) error {
 		if err != nil {
 			return err
 		}
+		defer r.Close()
 		w = r
 	} else {
 		w = outFile
