@@ -57,7 +57,7 @@ func main() {
 			flag.Usage()
 			return
 		}
-		rsa.InitKey(nil, data)
+		utils.InitEncrypt(nil, data)
 	}
 
 	// 输入位置
@@ -71,7 +71,7 @@ func main() {
 	if *check {
 		data, err := ioutil.ReadFile(*keyFile)
 		if err == nil {
-			rsa.InitKey(data, nil)
+			utils.InitEncrypt(data, nil)
 		}
 		err = utils.CheckPackage(*inFile)
 		if err != nil {
@@ -102,7 +102,7 @@ func main() {
 
 		data, err := ioutil.ReadFile(*keyFile)
 		if err == nil {
-			rsa.InitKey(data, nil)
+			utils.InitEncrypt(data, nil)
 		}
 		err = utils.Uncompress(*inFile, *outFile)
 		if err != nil {
