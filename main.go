@@ -6,10 +6,10 @@
 package main
 
 import (
-	"archive/utils"
-	"archive/utils/rsa"
 	"flag"
 	"fmt"
+	"github.com/Rehtt/archive/utils"
+	"github.com/Rehtt/archive/utils/rsa"
 	"io/ioutil"
 	"log"
 )

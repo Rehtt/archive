@@ -6,13 +6,13 @@
 package utils
 
 import (
-	"archive/utils/aes"
-	"archive/utils/rsa"
 	"bufio"
 	"bytes"
 	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"github.com/Rehtt/archive/utils/aes"
+	"github.com/Rehtt/archive/utils/rsa"
 	"io"
 	"log"
 	"math/big"

@@ -1,4 +1,4 @@
-module archive
+module github.com/Rehtt/archive
 
 go 1.18
 
