@@ -7,18 +7,21 @@ package utils
 
 import (
 	"archive/tar"
+	"archive/utils/rsa"
+	"bufio"
 	"github.com/ulikunitz/xz"
 	"io"
+	"log"
 	"os"
 	"strings"
 )
 
-func Compress(targetPath string, dest string) error {
-	d, err := os.Create(dest)
+func Compress(targetPath, dest string, isEncrypt bool) error {
+	outFile, err := os.Create(dest)
 	if err != nil {
 		return err
 	}
-	defer d.Close()
+	defer outFile.Close()
 
 	file, err := os.Open(targetPath)
 	if err != nil {
@@ -26,9 +29,21 @@ func Compress(targetPath string, dest string) error {
 	}
 	defer file.Close()
 
-	r := NewWriter(d)
+	var w io.Writer
+	if isEncrypt {
+		outFile.Write([]byte("Rsa!"))
+		r := rsa.NewWriter(outFile)
+		defer func() {
+			if err := r.Close(); err != nil {
+				log.Fatalln(err)
+			}
+		}()
+		w = r
+	} else {
+		w = outFile
+	}
 
-	xw, err := xz.NewWriter(r)
+	xw, err := xz.NewWriter(w)
 	if err != nil {
 		return err
 	}
@@ -77,13 +92,27 @@ func compress(file *os.File, prefix string, tw *tar.Writer) error {
 	return nil
 }
 
-func DeTar(tarFile, dest string) error {
-	srcFile, err := os.Open(tarFile)
+func Uncompress(tarFile, dest string) error {
+	inFile, err := os.Open(tarFile)
 	if err != nil {
 		return err
 	}
-	defer srcFile.Close()
-	r := NewReader(srcFile)
+	defer inFile.Close()
+
+	buf := bufio.NewReader(inFile)
+	var r io.Reader
+	// 检查头部
+	temp, err := buf.Peek(4)
+	if err != nil {
+		return err
+	}
+	if string(temp) == "Rsa!" {
+		buf.Discard(4)
+		r = rsa.NewReader(buf)
+	} else {
+		r = buf
+	}
+
 	xr, err := xz.NewReader(r)
 	if err != nil {
 		return err
@@ -120,5 +149,5 @@ func createFile(name string) (*os.File, error) {
 }
 
 func CheckPackage(tarFile string) error {
-	return DeTar(tarFile, "")
+	return Uncompress(tarFile, "")
 }

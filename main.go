@@ -7,6 +7,7 @@ package main
 
 import (
 	"archive/utils"
+	"archive/utils/rsa"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -19,8 +20,7 @@ var (
 	archiveMode = flag.Bool("a", false, "压缩")
 	encrypt     = flag.Bool("e", false, "开启加密")
 
-	unArchiveMode = flag.Bool("ua", false, "解压")
-	decrypt       = flag.Bool("d", false, "开启解密")
+	unArchiveMode = flag.Bool("ua", false, "解压，会自动检查是否加密")
 	check         = flag.Bool("check", false, "检测压缩包的错误")
 
 	inFile  = flag.String("in", "", "输入文件")
@@ -32,8 +32,9 @@ var (
 func main() {
 	flag.Parse()
 
+	// 生成证书
 	if *gen {
-		priKey, pubKey, err := utils.GenerateRsaKey()
+		priKey, pubKey, err := rsa.GenerateRsaKey()
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -47,21 +48,32 @@ func main() {
 		}
 		return
 	}
+
+	// 加密
+	if *encrypt {
+		data, err := ioutil.ReadFile(*keyFile)
+		if err != nil {
+			log.Fatalln(err)
+			flag.Usage()
+			return
+		}
+		rsa.InitKey(nil, data)
+	}
+
+	// 输入位置
 	if *inFile == "" {
 		fmt.Println("输入为空")
 		flag.Usage()
 		return
 	}
 
+	// 检查错误
 	if *check {
-		if *decrypt {
-			data, err := ioutil.ReadFile(*keyFile)
-			if err != nil {
-				log.Fatalln(err)
-			}
-			utils.InitKey(data, nil)
+		data, err := ioutil.ReadFile(*keyFile)
+		if err == nil {
+			rsa.InitKey(data, nil)
 		}
-		err := utils.CheckPackage(*inFile)
+		err = utils.CheckPackage(*inFile)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -69,37 +81,30 @@ func main() {
 		return
 	}
 
+	// 输出位置
 	if *outFile == "" {
 		fmt.Println("输出为空")
 		flag.Usage()
 		return
 	}
 
+	// 压缩
 	if *archiveMode {
-		if *encrypt {
-			data, err := ioutil.ReadFile(*keyFile)
-			if err != nil {
-				log.Fatalln(err)
-			}
-			utils.InitKey(nil, data)
-		}
-		err := utils.Compress(*inFile, *outFile)
+		err := utils.Compress(*inFile, *outFile, true)
 		if err != nil {
 			log.Fatalln(err)
 		}
 		return
 	}
 
+	// 解压
 	if *unArchiveMode {
 
-		if *decrypt {
-			data, err := ioutil.ReadFile(*keyFile)
-			if err != nil {
-				log.Fatalln(err)
-			}
-			utils.InitKey(data, nil)
+		data, err := ioutil.ReadFile(*keyFile)
+		if err == nil {
+			rsa.InitKey(data, nil)
 		}
-		err := utils.DeTar(*inFile, *outFile)
+		err = utils.Uncompress(*inFile, *outFile)
 		if err != nil {
 			log.Fatalln(err)
 		}

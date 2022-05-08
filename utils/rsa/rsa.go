@@ -3,7 +3,7 @@
  * @Date: 2022/5/7 14:11
  */
 
-package utils
+package rsa
 
 import (
 	"bytes"
@@ -21,6 +21,7 @@ var pirKey []byte
 var open bool
 
 const size = 4096
+const plaintextSize = 501
 
 func InitKey(privateKey, publicKey []byte) {
 	pubKey = publicKey
@@ -34,16 +35,14 @@ type Reader struct {
 }
 
 func (r *Reader) Read(p []byte) (n int, err error) {
+	// 按需解密
 	s := len(p)
-	if !open {
-		return r.r.Read(p)
-	}
-
 	if r.buf.Len() < s {
+		// rsa密文位数等于公钥位数
 		buf := make([]byte, size/8)
 
 		for r.buf.Len() < s {
-			nn, err := r.r.Read(buf)
+			nn, err := io.ReadFull(r.r, buf)
 			if err != nil {
 				return 0, err
 			}
@@ -64,32 +63,45 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 	}
 
 	n = copy(p, r.buf.Next(s))
-
 	return
 }
 
 type Writer struct {
-	w io.Writer
+	w   io.Writer
+	buf bytes.Buffer
 }
 
 func (w *Writer) Write(p []byte) (n int, err error) {
 	if !open {
 		return w.w.Write(p)
 	}
-	buf := bytes.NewBuffer(p)
-	for buf.Len() != 0 {
-		var wBuf bytes.Buffer
-		out, err := Encrypt(buf.Next(501))
+
+	w.buf.Write(p)
+	for w.buf.Len() >= plaintextSize {
+		out, err := Encrypt(w.buf.Next(plaintextSize))
 		if err != nil {
 			return 0, err
 		}
-		wBuf.Write(out)
-		_, err = io.Copy(w.w, &wBuf)
+		_, err = w.w.Write(out)
 		if err != nil {
 			return 0, err
 		}
 	}
 	return len(p), nil
+}
+func (w *Writer) Close() error {
+	if w.buf.Len() != 0 {
+		out, err := Encrypt(w.buf.Bytes())
+		if err != nil {
+			return err
+		}
+		_, err = w.w.Write(out)
+		if err != nil {
+			return err
+		}
+		w.buf.Reset()
+	}
+	return nil
 }
 
 func NewReader(r io.Reader) *Reader {
@@ -102,7 +114,7 @@ func NewWriter(w io.Writer) *Writer {
 func Encrypt(src []byte) ([]byte, error) {
 	block, _ := pem.Decode(pubKey)
 	if block == nil || !strings.Contains(strings.ToUpper(block.Type), "PUBLIC KEY") {
-		return nil, errors.New("failed to decode PEM block containing public key")
+		return nil, errors.New("未指定公钥，或公钥错误")
 	}
 	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
@@ -114,7 +126,7 @@ func Encrypt(src []byte) ([]byte, error) {
 func Decrypt(cip []byte) ([]byte, error) {
 	block, _ := pem.Decode(pirKey)
 	if block == nil || !strings.Contains(strings.ToUpper(block.Type), "PRIVATE KEY") {
-		return nil, errors.New("failed to decode PEM block containing PRIVATE key")
+		return nil, errors.New("未指定私钥，或私钥错误")
 	}
 	privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
@@ -124,49 +136,27 @@ func Decrypt(cip []byte) ([]byte, error) {
 	return plainText, err
 }
 func GenerateRsaKey() (priKey, pubKey []byte, err error) {
-
-	// 1. 使用rsa中的GenerateKey方法生成私钥
-
 	privateKey, err := rsa.GenerateKey(rand.Reader, size)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// 2. 通过x509标准将得到的ras私钥序列化为ASN.1 的 DER编码字符串
-
 	derText := x509.MarshalPKCS1PrivateKey(privateKey)
-
-	// 3. 要组织一个pem.Block(base64编码)
-
 	block := pem.Block{
-		Type:  "rsa private key", // 这个地方写个字符串就行
+		Type:  "rsa private key",
 		Bytes: derText,
 	}
-
-	// 4. pem编码
 	priKey = pem.EncodeToMemory(&block)
 
-	// ============ 公钥 ==========
-
-	// 1. 从私钥中取出公钥
-
 	publicKey := privateKey.PublicKey
-
-	// 2. 使用x509标准序列化
-
 	derstream, err := x509.MarshalPKIXPublicKey(&publicKey)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// 3. 将得到的数据放到pem.Block中
-
 	block = pem.Block{
 		Type:  "rsa public key",
 		Bytes: derstream,
 	}
-
-	// 4. pem编码
 	pubKey = pem.EncodeToMemory(&block)
 	return
 }
