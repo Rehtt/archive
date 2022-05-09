@@ -10,7 +10,7 @@ import (
 	"github.com/ulikunitz/xz"
 	"io"
 	"os"
-	"strings"
+	"path/filepath"
 )
 
 func Compress(targetPath, dest string, isEncrypt bool) error {
@@ -123,7 +123,7 @@ func Uncompress(tarFile, dest string) error {
 }
 
 func createFile(name string) (*os.File, error) {
-	err := os.MkdirAll(string([]rune(name)[0:strings.LastIndex(name, "/")]), 0755)
+	err := os.MkdirAll(filepath.Dir(name), 0755)
 	if err != nil {
 		return nil, err
 	}

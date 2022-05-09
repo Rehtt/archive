@@ -29,13 +29,10 @@ func AesCBCEncrypt(rawData, key, iv []byte) ([]byte, error) {
 	if err != nil {
 		panic(err)
 	}
-	blockSize := block.BlockSize()
 	//rawData = PKCS7Padding(rawData, blockSize)
-	cipherText := make([]byte, blockSize+len(rawData))
-
 	mode := cipher.NewCBCEncrypter(block, iv)
-	mode.CryptBlocks(cipherText[blockSize:], rawData)
-	return cipherText, nil
+	mode.CryptBlocks(rawData, rawData)
+	return rawData, nil
 }
 
 func AesCBCDncrypt(encryptData, key, iv []byte) ([]byte, error) {
@@ -47,14 +44,12 @@ func AesCBCDncrypt(encryptData, key, iv []byte) ([]byte, error) {
 	if len(encryptData) < blockSize {
 		panic("ciphertext too short")
 	}
-	encryptData = encryptData[blockSize:]
 	if len(encryptData)%blockSize != 0 {
 		fmt.Println(len(encryptData))
 		panic("ciphertext is not a multiple of the block size")
 	}
 	mode := cipher.NewCBCDecrypter(block, iv)
 	mode.CryptBlocks(encryptData, encryptData)
-	//encryptData = PKCS7UnPadding(encryptData)
 	return encryptData, nil
 }
 
