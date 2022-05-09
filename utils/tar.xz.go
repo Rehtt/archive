@@ -66,13 +66,13 @@ func compress(file *os.File, prefix string, tw *tar.Writer) error {
 		return err
 	}
 	if info.IsDir() {
-		prefix = prefix + "/" + info.Name()
+		prefix = filepath.Join(prefix, info.Name())
 		fileInfos, err := file.Readdir(-1)
 		if err != nil {
 			return err
 		}
 		for _, fi := range fileInfos {
-			f, err := os.Open(file.Name() + "/" + fi.Name())
+			f, err := os.Open(filepath.Join(file.Name(), fi.Name()))
 			if err != nil {
 				return err
 			}
@@ -83,7 +83,7 @@ func compress(file *os.File, prefix string, tw *tar.Writer) error {
 		}
 	} else {
 		header, err := tar.FileInfoHeader(info, "")
-		header.Name = prefix + "/" + header.Name
+		header.Name = filepath.Join(prefix, header.Name)
 		if err != nil {
 			return err
 		}
