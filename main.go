@@ -90,7 +90,7 @@ func main() {
 
 	// 压缩
 	if *archiveMode {
-		err := utils.Compress(*inFile, *outFile, true)
+		err := utils.Compress(*inFile, *outFile, *encrypt)
 		if err != nil {
 			log.Fatalln(err)
 		}
