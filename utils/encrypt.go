@@ -22,7 +22,7 @@ var (
 	privateKey []byte
 )
 
-const size = 512
+const Size = 512
 
 type password struct {
 	Iv   []byte `json:"iv"`
@@ -41,8 +41,8 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 		return w.w.Write(p)
 	}
 	w.buf.Write(p)
-	for w.buf.Len() > size {
-		out, err := aes.AesCBCEncrypt(w.buf.Next(size), w.Key, w.Iv)
+	for w.buf.Len() > Size {
+		out, err := aes.AesCBCEncrypt(w.buf.Next(Size), w.Key, w.Iv)
 		if err != nil {
 			return 0, err
 		}
@@ -56,8 +56,8 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 func (w *Writer) Close() error {
 	if w.buf.Len() != 0 {
 		var a, b, c byte
-		if w.buf.Len() != size {
-			s := size - w.buf.Len()
+		if w.buf.Len() != Size {
+			s := Size - w.buf.Len()
 			if s < 256 {
 				a = byte(s)
 			} else {
@@ -67,7 +67,7 @@ func (w *Writer) Close() error {
 					c = b - 255
 				}
 			}
-			w.buf.Write(bytes.Repeat([]byte{0}, s))
+			w.buf.Write(random(s))
 
 		}
 		out, err := aes.AesCBCEncrypt(w.buf.Bytes(), w.Key, w.Iv)
@@ -108,13 +108,9 @@ type Reader struct {
 }
 
 func (r *Reader) Read(p []byte) (n int, err error) {
-	if r.Key == nil {
-		return r.r.Read(p)
-	}
-
 	size := len(p)
 	if r.buf.Len() < size {
-		buf := make([]byte, 512)
+		buf := make([]byte, Size)
 		for r.buf.Len() < size {
 			nn, err := io.ReadFull(r.r, buf)
 			if err != nil {
@@ -126,7 +122,8 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 			}
 			temp, err := r.r.Peek(4)
 			if len(temp) != 0 && err != nil {
-				nn = int(temp[0]) + int(temp[1]) + int(temp[2])
+				nn = Size - int(temp[0]) + int(temp[1]) + int(temp[2])
+				err = nil
 			}
 			r.buf.Write(out[:nn])
 		}
@@ -135,21 +132,22 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 	return
 }
 
-func NewReader(r io.Reader) *Reader {
-	reader := &Reader{}
-	buf := bufio.NewReader(r)
-	m, err := buf.Peek(512)
-	if err == nil {
-		out, err := rsa.Decrypt(m, privateKey)
-		if err == nil {
-			err = json.Unmarshal(out, &reader.password)
-			if err == nil {
-				buf.Discard(512)
-			}
-		}
+func NewReader(r io.Reader) (*Reader, error) {
+	buf := make([]byte, 512)
+	r.Read(buf)
+	out, err := rsa.Decrypt(buf, privateKey)
+	if err != nil {
+		return nil, err
+
 	}
-	reader.r = buf
-	return reader
+
+	reader := &Reader{r: bufio.NewReader(r)}
+	err = json.Unmarshal(out, &reader.password)
+	if err != nil {
+		return nil, err
+	}
+
+	return reader, nil
 }
 
 func InitEncrypt(private, public []byte) {

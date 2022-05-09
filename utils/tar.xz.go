@@ -7,11 +7,15 @@ package utils
 
 import (
 	"archive/tar"
+	"errors"
 	"github.com/ulikunitz/xz"
 	"io"
 	"os"
 	"path/filepath"
 )
+
+var version = []byte{'A', 1}
+var filling = 16 - 3
 
 func Compress(targetPath, dest string, isEncrypt bool) error {
 	outFile, err := os.Create(dest)
@@ -26,8 +30,14 @@ func Compress(targetPath, dest string, isEncrypt bool) error {
 	}
 	defer file.Close()
 
+	// 编码版本
+	outFile.Write(version)
+
 	var w io.Writer
 	if isEncrypt {
+		outFile.Write([]byte{1})
+		outFile.Write(make([]byte, filling))
+
 		r, err := NewWriter(outFile)
 		if err != nil {
 			return err
@@ -35,6 +45,9 @@ func Compress(targetPath, dest string, isEncrypt bool) error {
 		defer r.Close()
 		w = r
 	} else {
+		outFile.Write([]byte{0})
+		outFile.Write(make([]byte, filling))
+
 		w = outFile
 	}
 
@@ -94,7 +107,24 @@ func Uncompress(tarFile, dest string) error {
 	}
 	defer inFile.Close()
 
-	r := NewReader(inFile)
+	head := make([]byte, 16)
+	inFile.Read(head)
+	if head[0] != version[0] || head[1] != version[1] {
+		return errors.New("file version error")
+	}
+	isEn := head[2] == 1
+
+	var r io.Reader
+	if isEn {
+		rr, err := NewReader(inFile)
+		if err != nil {
+			return err
+		}
+		r = rr
+	} else {
+		r = inFile
+	}
+
 	xr, err := xz.NewReader(r)
 	if err != nil {
 		return err
