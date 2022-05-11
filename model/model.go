@@ -8,16 +8,19 @@ package model
 import (
 	"bufio"
 	"errors"
-	"io"
+	"github.com/Rehtt/archive/utils"
 	"os"
-	"path/filepath"
 )
 
 type Model interface {
 	Version() string
-	Compress(in *bufio.Reader, out io.Writer, encrypt bool) error
-	Uncompress(in *bufio.Reader, out string) error
-	CheckPackage(in *bufio.Reader) error
+	Compress(in string, out *os.File, encrypt *Encrypt) error
+	Uncompress(in *bufio.Reader, out string, encrypt *Encrypt) error
+	CheckPackage(in *bufio.Reader, encrypt *Encrypt) error
+}
+
+type Encrypt struct {
+	Key []byte
 }
 
 var (
@@ -28,28 +31,20 @@ func Register(m Model) {
 	model[m.Version()] = m
 }
 
-func Compress(inFile, outFile, compressModel string, encrypt bool) error {
-	iFile, err := os.Open(filepath.Clean(inFile))
-	if err != nil {
-		return err
-	}
-	defer iFile.Close()
-
-	oFile, err := os.Open(filepath.Clean(outFile))
+func Compress(inFile, outFile, compressModel string, encrypt *Encrypt) error {
+	oFile, err := utils.CreateFile(outFile)
 	if err != nil {
 		return err
 	}
 	defer oFile.Close()
 
-	buf := bufio.NewReader(iFile)
-
 	if m, ok := model[compressModel]; ok {
-		return m.Compress(buf, oFile, encrypt)
+		return m.Compress(inFile, oFile, encrypt)
 	}
 	return errors.New("未知编码")
 }
 
-func Uncompress(inFile, outFile string) error {
+func Uncompress(inFile, outFile string, encrypt *Encrypt) error {
 	iFile, err := os.Open(inFile)
 	if err != nil {
 		return err
@@ -62,12 +57,12 @@ func Uncompress(inFile, outFile string) error {
 		return err
 	}
 	if m, ok := model[version]; ok {
-		return m.Uncompress(buf, outFile)
+		return m.Uncompress(buf, outFile, encrypt)
 	}
 	return errors.New("未知编码")
 }
 
-func CheckPackage(inFile string) error {
+func CheckPackage(inFile string, encrypt *Encrypt) error {
 	iFile, err := os.Open(inFile)
 	if err != nil {
 		return err
@@ -80,7 +75,7 @@ func CheckPackage(inFile string) error {
 		return err
 	}
 	if m, ok := model[version]; ok {
-		return m.CheckPackage(buf)
+		return m.CheckPackage(buf, encrypt)
 	}
 	return errors.New("未知编码")
 

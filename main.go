@@ -9,7 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Rehtt/archive/model"
-	"github.com/Rehtt/archive/utils"
+	_ "github.com/Rehtt/archive/model/a1"
 	"github.com/Rehtt/archive/utils/rsa"
 	"io/ioutil"
 	"log"
@@ -51,14 +51,15 @@ func main() {
 	}
 
 	// 加密
-	if *encrypt {
+	en := new(model.Encrypt)
+	if *encrypt || *keyFile != "" {
 		data, err := ioutil.ReadFile(*keyFile)
-		if err != nil {
+		if err != nil || *keyFile == "" {
 			log.Fatalln(err)
 			flag.Usage()
 			return
 		}
-		utils.InitEncrypt(nil, data)
+		en.Key = data
 	}
 
 	// 输入位置
@@ -70,11 +71,7 @@ func main() {
 
 	// 检查错误
 	if *check {
-		data, err := ioutil.ReadFile(*keyFile)
-		if err == nil {
-			utils.InitEncrypt(data, nil)
-		}
-		err = model.CheckPackage(*inFile)
+		err := model.CheckPackage(*inFile, en)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -91,7 +88,7 @@ func main() {
 
 	// 压缩
 	if *archiveMode {
-		err := model.Compress(*inFile, *outFile, "A1")
+		err := model.Compress(*inFile, *outFile, "A1", en)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -100,12 +97,7 @@ func main() {
 
 	// 解压
 	if *unArchiveMode {
-
-		data, err := ioutil.ReadFile(*keyFile)
-		if err == nil {
-			utils.InitEncrypt(data, nil)
-		}
-		err = model.Uncompress(*inFile, *outFile)
+		err := model.Uncompress(*inFile, *outFile, en)
 		if err != nil {
 			log.Fatalln(err)
 		}
