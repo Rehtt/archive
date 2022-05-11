@@ -8,6 +8,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/Rehtt/archive/model"
 	"github.com/Rehtt/archive/utils"
 	"github.com/Rehtt/archive/utils/rsa"
 	"io/ioutil"
@@ -73,7 +74,7 @@ func main() {
 		if err == nil {
 			utils.InitEncrypt(data, nil)
 		}
-		err = utils.CheckPackage(*inFile)
+		err = model.CheckPackage(*inFile)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -90,7 +91,7 @@ func main() {
 
 	// 压缩
 	if *archiveMode {
-		err := utils.Compress(*inFile, *outFile, *encrypt)
+		err := model.Compress(*inFile, *outFile, "A1")
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -104,7 +105,7 @@ func main() {
 		if err == nil {
 			utils.InitEncrypt(data, nil)
 		}
-		err = utils.Uncompress(*inFile, *outFile)
+		err = model.Uncompress(*inFile, *outFile)
 		if err != nil {
 			log.Fatalln(err)
 		}
