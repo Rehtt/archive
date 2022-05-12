@@ -55,8 +55,8 @@ func main() {
 	if *encrypt || *keyFile != "" {
 		data, err := ioutil.ReadFile(*keyFile)
 		if err != nil || *keyFile == "" {
-			log.Fatalln(err)
 			flag.Usage()
+			log.Fatalln(err)
 			return
 		}
 		en.Key = data
