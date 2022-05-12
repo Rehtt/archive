@@ -12,23 +12,13 @@ import (
 	"path/filepath"
 )
 
-//func Tar(in string, out io.Writer) error {
-//	inFile, err := os.Open(in)
-//	if err != nil {
-//		return err
-//	}
-//	tw := tar.NewWriter(out)
-//	defer fmt.Println(tw.Close())
-//	err = compress(inFile, "", tw)
-//	return err
-//}
 func Compress(file *os.File, prefix string, tw *tar.Writer) error {
 	info, err := file.Stat()
 	if err != nil {
 		return err
 	}
 	if info.IsDir() {
-		prefix = filepath.Join(prefix, info.Name())
+		prefix = prefix + "/" + info.Name()
 		fileInfos, err := file.Readdir(-1)
 		if err != nil {
 			return err
@@ -45,7 +35,7 @@ func Compress(file *os.File, prefix string, tw *tar.Writer) error {
 		}
 	} else {
 		header, err := tar.FileInfoHeader(info, "")
-		header.Name = filepath.Join(prefix, header.Name)
+		header.Name = prefix + "/" + header.Name
 		if err != nil {
 			return err
 		}
@@ -74,8 +64,7 @@ func UnTar(r io.Reader, to string) error {
 			}
 		}
 		if to != "" {
-			filename := filepath.Join(to, hdr.Name)
-			file, err := CreateFile(filename)
+			file, err := CreateFile(to + "/" + hdr.Name)
 			if err != nil {
 				return err
 			}
