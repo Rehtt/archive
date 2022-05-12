@@ -39,7 +39,8 @@ func Compress(inFile, outFile, compressModel string, encrypt *Encrypt) error {
 	defer oFile.Close()
 
 	if m, ok := model[compressModel]; ok {
-		return m.Compress(inFile, oFile, encrypt)
+		err = m.Compress(inFile, oFile, encrypt)
+		return err
 	}
 	return errors.New("未知编码")
 }

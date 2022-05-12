@@ -8,7 +8,10 @@ package a1
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
+	"errors"
 	"github.com/Rehtt/archive/utils/aes"
+	"github.com/Rehtt/archive/utils/rsa"
 	"io"
 )
 
@@ -44,8 +47,18 @@ func (d *decrypt) Read(p []byte) (n int, err error) {
 }
 
 func (a *A1) newDecrypt(r *bufio.Reader) (*decrypt, error) {
+	blockData := make([]byte, blockSize)
+	_, err := io.ReadFull(r, blockData)
+	if err != nil {
+		return nil, errors.New("file error")
+	}
+	out, err := rsa.Decrypt(blockData, a.rsaKey.Key)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(out, &a.aes)
 	return &decrypt{
 		r:  r,
 		a1: a,
-	}, nil
+	}, err
 }

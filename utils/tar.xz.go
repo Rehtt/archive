@@ -12,19 +12,17 @@ import (
 	"path/filepath"
 )
 
-var version = []byte{'A', 1}
-var filling = 16 - 3
-
-func Tar(in string, out io.Writer) error {
-	inFile, err := os.Open(in)
-	if err != nil {
-		return err
-	}
-	tw := tar.NewWriter(out)
-	defer tw.Close()
-	return compress(inFile, "", tw)
-}
-func compress(file *os.File, prefix string, tw *tar.Writer) error {
+//func Tar(in string, out io.Writer) error {
+//	inFile, err := os.Open(in)
+//	if err != nil {
+//		return err
+//	}
+//	tw := tar.NewWriter(out)
+//	defer fmt.Println(tw.Close())
+//	err = compress(inFile, "", tw)
+//	return err
+//}
+func Compress(file *os.File, prefix string, tw *tar.Writer) error {
 	info, err := file.Stat()
 	if err != nil {
 		return err
@@ -40,7 +38,7 @@ func compress(file *os.File, prefix string, tw *tar.Writer) error {
 			if err != nil {
 				return err
 			}
-			err = compress(f, prefix, tw)
+			err = Compress(f, prefix, tw)
 			if err != nil {
 				return err
 			}

@@ -7,8 +7,10 @@ package a1
 
 import (
 	"bytes"
+	"encoding/json"
 	"github.com/Rehtt/archive/utils"
 	"github.com/Rehtt/archive/utils/aes"
+	"github.com/Rehtt/archive/utils/rsa"
 	"io"
 )
 
@@ -46,6 +48,18 @@ func (e *encrypt) Close() error {
 }
 
 func (a *A1) newEncrypt(out io.Writer) (*encrypt, error) {
+	k, err := json.Marshal(a.aes)
+	if err != nil {
+		return nil, err
+	}
+	o, err := rsa.Encrypt(k, a.rsaKey.Key)
+	if err != nil {
+		return nil, err
+	}
+	_, err = out.Write(o)
+	if err != nil {
+		return nil, err
+	}
 	return &encrypt{
 		w:  out,
 		a1: a,
