@@ -12,7 +12,7 @@ go install github.com/Rehtt/archive@latest
 
 ## 生成公钥与私钥
 ```shell
-./archive -generateRsaKey
+archive -generateRsaKey
 ```
 将生成`public.pem（加密）`与`private.pem（解密）`证书
 
@@ -20,22 +20,22 @@ go install github.com/Rehtt/archive@latest
 
 ## 普通tar.xz打包压缩
 ```shell
-./archive -a -in test -out test.tar.xz
+archive -a -in test -out test.tar.xz
 ```
 
 ## 加密压缩
 ```shell
-./archive -a -e -inKey public.pem -in test -out test.tar.xz
+archive -a -e -inKey public.pem -in test -out test.tar.xz
 ```
 
 ## 普通tar.xz解压
 ```shell
-./archive -ua -in test.tar.xz -out test
+archive -ua -in test.tar.xz -out test
 ```
 
 ## 解密解压
 ```shell
-./archive -ua -inKey public.pem -in test.tar.xz -out test
+archive -ua -inKey public.pem -in test.tar.xz -out test
 ```
 
 # 命令树
