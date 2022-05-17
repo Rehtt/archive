@@ -1,5 +1,13 @@
 使用RSA 4096bit 与AES 256bit CBC共同加密、解密的tar.xz压缩、解压缩的简单实现
 
+# 安装
+## go install
+要求go版本>=1.18
+
+```shell
+go install github.com/Rehtt/archive@latest
+```
+
 # 命令
 
 ## 生成公钥与私钥
