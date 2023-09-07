@@ -87,8 +87,12 @@ func main() {
 	}
 
 	// 压缩
+	var defaultVersion = model.HeadVersion{
+		Protocol: 'A',
+		Version:  1,
+	}
 	if *archiveMode {
-		err := model.Compress(*inFile, *outFile, "A1", en)
+		err := model.Compress(*inFile, *outFile, defaultVersion, en)
 		if err != nil {
 			log.Fatalln(err)
 		}

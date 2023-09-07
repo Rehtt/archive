@@ -37,7 +37,7 @@ func (d *decrypt) Read(p []byte) (n int, err error) {
 			}
 			_, err = d.r.Peek(1)
 			if err != nil {
-				n = d.a1.lastLength
+				n = int(d.a1.lastLength)
 			}
 			d.buf.Write(out[:n])
 		}

@@ -8,6 +8,8 @@ package a1
 import (
 	"archive/tar"
 	"bufio"
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"github.com/Rehtt/archive/model"
 	"github.com/Rehtt/archive/utils"
@@ -17,12 +19,12 @@ import (
 )
 
 const (
-	headSize  = 16
+	headSize  = 14
 	blockSize = 512
 )
 
 type A1 struct {
-	lastLength int
+	lastLength uint16
 	isEncrypt  bool
 	rsaKey     *model.Encrypt
 
@@ -34,6 +36,11 @@ type aesConfig struct {
 	Salt []byte `json:"salt"`
 }
 
+type Head struct {
+	IsEncryption bool
+	LastLength   uint16
+}
+
 func (a *A1) Compress(in string, out *os.File, encrypt *model.Encrypt) error {
 	inFile, err := os.Open(in)
 	if err != nil {
@@ -41,29 +48,23 @@ func (a *A1) Compress(in string, out *os.File, encrypt *model.Encrypt) error {
 	}
 	defer inFile.Close()
 
-	head := make([]byte, headSize)
+	head := Head{}
+	if binary.Size(head) > headSize {
+		return errors.New("head too big")
+	}
 	defer func() {
-		out.Seek(0, 0)
-		s := a.lastLength
-		if s < 256 {
-			head[3] = byte(s)
-		} else {
-			head[3] = byte(255)
-			head[4] = byte(s) - head[3]
-			if int(head[4])-255 > 0 {
-				head[5] = head[4] - 255
-			}
-		}
-		out.Write(head)
+		out.Seek(int64(a.Version().Len()), 0)
+		head.LastLength = a.lastLength
+		var tmp bytes.Buffer
+		binary.Write(&tmp, model.HeadVersionEndian, head)
+		out.Write(tmp.Bytes())
 	}()
-	head[0] = 'A'
-	head[1] = 1
-
-	out.Write(head)
+	// 预留位置
+	out.Write(make([]byte, headSize))
 
 	var w io.Writer
 	if encrypt.Key != nil {
-		head[2] = 1
+		head.IsEncryption = true
 
 		a.rsaKey = encrypt
 		a.aes.Salt = utils.Random(16)
@@ -76,7 +77,6 @@ func (a *A1) Compress(in string, out *os.File, encrypt *model.Encrypt) error {
 		defer ew.Close()
 		w = ew
 	} else {
-		head[2] = 0
 		w = out
 	}
 	x, err := xz.NewWriter(w)
@@ -92,14 +92,18 @@ func (a *A1) Compress(in string, out *os.File, encrypt *model.Encrypt) error {
 }
 
 func (a *A1) Uncompress(in *bufio.Reader, out string, encrypt *model.Encrypt) error {
-	head := make([]byte, headSize)
-	_, err := io.ReadFull(in, head)
+	readHead := make([]byte, headSize)
+	_, err := io.ReadFull(in, readHead)
 	if err != nil {
 		return errors.New("file not recognized")
 	}
+	var head Head
+	if err = binary.Read(bytes.NewReader(readHead), model.HeadVersionEndian, &head); err != nil {
+		return err
+	}
 
-	a.lastLength = int(head[3]) + int(head[4]) + int(head[5])
-	a.isEncrypt = head[2] == 1
+	a.lastLength = head.LastLength
+	a.isEncrypt = head.IsEncryption
 
 	var r io.Reader
 	if a.isEncrypt {
@@ -122,8 +126,11 @@ func (a *A1) CheckPackage(in *bufio.Reader, encrypt *model.Encrypt) error {
 	return a.Uncompress(in, "", encrypt)
 }
 
-func (A1) Version() string {
-	return "A1"
+func (A1) Version() model.HeadVersion {
+	return model.HeadVersion{
+		Protocol: 'A',
+		Version:  1,
+	}
 }
 
 var a1 = new(A1)

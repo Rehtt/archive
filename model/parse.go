@@ -7,13 +7,18 @@ package model
 
 import (
 	"bufio"
-	"fmt"
+	"encoding/binary"
+	"io"
 )
 
-func ParseVersion(i *bufio.Reader) (string, error) {
-	temp, err := i.Peek(2)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%s%d", string(temp[0]), temp[1]), nil
+var HeadVersionEndian = binary.BigEndian
+
+func ParseVersion(i *bufio.Reader) (HeadVersion, error) {
+	var out HeadVersion
+	err := binary.Read(i, HeadVersionEndian, &out)
+	return out, err
+}
+
+func WriteVersion(i io.Writer, version HeadVersion) error {
+	return binary.Write(i, HeadVersionEndian, version)
 }
