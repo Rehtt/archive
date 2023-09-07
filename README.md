@@ -5,7 +5,7 @@
 要求go版本>=1.18
 
 ```shell
-go install github.com/Rehtt/archive@latest
+go install github.com/Rehtt/archive@v1.0.0
 ```
 
 # 命令
