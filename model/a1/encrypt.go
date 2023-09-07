@@ -35,8 +35,7 @@ func (e *encrypt) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 func (e *encrypt) Close() error {
-	e.a1.lastLength = uint16(e.buf.Len())
-	if e.a1.lastLength != 0 {
+	if e.buf.Len() != 0 {
 		e.buf.Write(utils.Random(blockSize - e.buf.Len()))
 		out, err := aes.AesCBCEncrypt(e.buf.Bytes(), e.a1.aes.Key, e.a1.aes.Iv)
 		if err != nil {

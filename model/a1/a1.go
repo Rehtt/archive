@@ -24,9 +24,8 @@ const (
 )
 
 type A1 struct {
-	lastLength uint16
-	isEncrypt  bool
-	rsaKey     *model.Encrypt
+	isEncrypt bool
+	rsaKey    *model.Encrypt
 
 	aes aesConfig
 }
@@ -38,7 +37,6 @@ type aesConfig struct {
 
 type Head struct {
 	IsEncryption bool
-	LastLength   uint16
 }
 
 func (a *A1) Compress(in string, out *os.File, encrypt *model.Encrypt) error {
@@ -48,24 +46,28 @@ func (a *A1) Compress(in string, out *os.File, encrypt *model.Encrypt) error {
 	}
 	defer inFile.Close()
 
-	head := Head{}
-	if binary.Size(head) > headSize {
+	head := Head{
+		IsEncryption: encrypt.Key != nil,
+	}
+	size := headSize - binary.Size(head)
+	if size < 0 {
 		return errors.New("head too big")
 	}
-	defer func() {
-		out.Seek(int64(a.Version().Len()), 0)
-		head.LastLength = a.lastLength
-		var tmp bytes.Buffer
-		binary.Write(&tmp, model.HeadVersionEndian, head)
-		out.Write(tmp.Bytes())
-	}()
-	// 预留位置
-	out.Write(make([]byte, headSize))
+	binary.Write(out, model.HeadVersionEndian, head)
+	if size > 0 {
+		out.Write(make([]byte, size))
+	}
+
+	//defer func() {
+	//	out.Seek(int64(a.Version().Len()), 0)
+	//	var tmp bytes.Buffer
+	//	binary.Write(&tmp, model.HeadVersionEndian, head)
+	//	out.Write(tmp.Bytes())
+	//}()
 
 	var w io.Writer
 	if encrypt.Key != nil {
 		head.IsEncryption = true
-
 		a.rsaKey = encrypt
 		a.aes.Salt = utils.Random(16)
 		a.aes.Iv = utils.Random(16)
@@ -102,7 +104,6 @@ func (a *A1) Uncompress(in *bufio.Reader, out string, encrypt *model.Encrypt) er
 		return err
 	}
 
-	a.lastLength = head.LastLength
 	a.isEncrypt = head.IsEncryption
 
 	var r io.Reader
