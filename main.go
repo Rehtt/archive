@@ -8,12 +8,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 
 	"github.com/Rehtt/archive/model"
 	_ "github.com/Rehtt/archive/model/a1"
+	"github.com/Rehtt/archive/utils"
 	"github.com/Rehtt/archive/utils/rsa"
 )
 
@@ -33,10 +33,11 @@ var (
 
 	keyFile = flag.String("inKey", "", "解密指定私钥，加密指定公钥")
 
-	showVersion = flag.Bool("v", false, "显示版本")
+	showVersion = flag.Bool("version", false, "显示版本")
 )
 
 func main() {
+	flag.BoolVar(&utils.ShowProcessFilePath, "v", false, "显示文件路径")
 	flag.Parse()
 	if *showVersion {
 		fmt.Println(VERSION)
@@ -63,7 +64,7 @@ func main() {
 	// 加密
 	en := new(model.Encrypt)
 	if *encrypt || *keyFile != "" {
-		data, err := ioutil.ReadFile(*keyFile)
+		data, err := os.ReadFile(*keyFile)
 		if err != nil || *keyFile == "" {
 			flag.Usage()
 			log.Fatalln(err)
