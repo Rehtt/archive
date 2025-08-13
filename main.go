@@ -8,12 +8,16 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+
 	"github.com/Rehtt/archive/model"
 	_ "github.com/Rehtt/archive/model/a1"
 	"github.com/Rehtt/archive/utils/rsa"
-	"io/ioutil"
-	"log"
 )
+
+var VERSION = ""
 
 var (
 	gen = flag.Bool("generateRsaKey", false, "生成公钥和私钥")
@@ -28,10 +32,16 @@ var (
 	outFile = flag.String("out", "", "输出文件")
 
 	keyFile = flag.String("inKey", "", "解密指定私钥，加密指定公钥")
+
+	showVersion = flag.Bool("v", false, "显示版本")
 )
 
 func main() {
 	flag.Parse()
+	if *showVersion {
+		fmt.Println(VERSION)
+		return
+	}
 
 	// 生成证书
 	if *gen {
@@ -39,11 +49,11 @@ func main() {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		err = ioutil.WriteFile("private.pem", priKey, 644)
+		err = os.WriteFile("private.pem", priKey, 0o644)
 		if err != nil {
 			log.Fatalln(err)
 		}
-		err = ioutil.WriteFile("public.pem", pubKey, 644)
+		err = os.WriteFile("public.pem", pubKey, 0o644)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -87,7 +97,7 @@ func main() {
 	}
 
 	// 压缩
-	var defaultVersion = model.HeadVersion{
+	defaultVersion := model.HeadVersion{
 		Protocol: 'A',
 		Version:  1,
 	}
